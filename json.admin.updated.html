@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin - Lost or Found</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 40px; }
+    table { border-collapse: collapse; width: 100%; margin-bottom: 40px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; vertical-align: top; }
+    button { padding: 4px 8px; margin: 2px; cursor: pointer; border-radius: 4px; }
+    h2 { margin-top: 40px; }
+    .edit-input { width: 95%; padding: 4px; }
+    .claimed-btn { background-color: #4caf4fc9; color: rgb(0, 0, 0); border: none; }
+    .notclaimed-btn { background-color: #f44336; color: rgb(0, 0, 0); border: none; }
+    .delete-btn { background-color: #555; color: white; border: none; }
+    tr:hover { background-color: #f9f9f9; }
+    th { background-color: #eee; }
+    .status-tag {
+      font-weight: bold;
+      padding: 4px 8px;
+      border-radius: 4px;
+      color: white;
+    }
+    .claimed-tag { background-color: #4caf4f; }
+    .notclaimed-tag { background-color: #f44336; }
+
+    /* Search bar styling */
+    .search-container {
+      display: flex;
+      justify-content: left;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    .search-container input {
+      width: 300px;
+      padding: 8px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Admin Dashboard - Lost and Found</h1>
+
+  <!-- Search Section -->
+  <div class="search-container">
+    <label><strong>Search:</strong></label>
+    <input type="text" id="searchInput" placeholder="Search by name, item, or department...">
+  </div>
+
+  <h2>Unclaimed Items</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Student Name</th>
+        <th>Student Number</th>
+        <th>Department</th>
+        <th>Grade & Section</th>
+        <th>Item Name</th>
+        <th>Description & Location</th>
+        <th>Contact Info</th>
+        <th>Date Submitted</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="lostTableBody"></tbody>
+  </table>
+
+  <h2>History (Claimed / Not Claimed)</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Student Name</th>
+        <th>Student Number</th>
+        <th>Department</th>
+        <th>Grade & Section</th>
+        <th>Item Name</th>
+        <th>Description & Location</th>
+        <th>Contact Info</th>
+        <th>Date Updated</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="foundTableBody"></tbody>
+  </table>
+
+  <script>
+    const lostTable = document.getElementById('lostTableBody');
+    const foundTable = document.getElementById('foundTableBody');
+    const searchInput = document.getElementById('searchInput');
+
+    function loadItems() {
+      const lostItems = JSON.parse(localStorage.getItem('lostItems')) || [];
+      const foundItems = JSON.parse(localStorage.getItem('foundItems')) || [];
+
+      const query = searchInput.value.toLowerCase();
+
+      lostTable.innerHTML = '';
+      foundTable.innerHTML = '';
+
+      // --- LOST ITEMS SECTION ---
+      const filteredLost = lostItems.filter(item =>
+        Object.values(item).some(value =>
+          String(value).toLowerCase().includes(query)
+        )
+      );
+
+      if (filteredLost.length === 0) {
+        lostTable.innerHTML = `<tr><td colspan="9" style="text-align:center;">No unclaimed items found.</td></tr>`;
+      }
+
+      filteredLost.forEach(item => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td><input class="edit-input" type="text" value="${item.studentName}" onchange="editItem(${item.id}, 'studentName', this.value)"></td>
+          <td><input class="edit-input" type="text" value="${item.studentNumber}" onchange="editItem(${item.id}, 'studentNumber', this.value)"></td>
+          <td>
+            <select class="edit-input" onchange="editItem(${item.id}, 'department', this.value)">
+              <option value="College Department" ${item.department === 'College Department' ? 'selected' : ''}>College Department</option>
+              <option value="Senior High School Department" ${item.department === 'Senior High School Department' ? 'selected' : ''}>SHS Department</option>
+              <option value="Grade School Department" ${item.department === 'Grade School Department' ? 'selected' : ''}>Grade School Department</option>
+            </select>
+          </td>
+          <td><input class="edit-input" type="text" value="${item.gradeSection}" onchange="editItem(${item.id}, 'gradeSection', this.value)"></td>
+          <td><input class="edit-input" type="text" value="${item.name}" onchange="editItem(${item.id}, 'name', this.value)"></td>
+          <td>
+            <textarea class="edit-input" rows="2" onchange="editItem(${item.id}, 'desc', this.value)">${item.desc}</textarea>
+            <br><label><strong>Location:</strong></label>
+            <input class="edit-input" type="text" value="${item.location}" onchange="editItem(${item.id}, 'location', this.value)">
+          </td>
+          <td><input class="edit-input" type="text" value="${item.contact}" onchange="editItem(${item.id}, 'contact', this.value)"></td>
+          <td>${item.date}</td>
+          <td>
+            <button class="claimed-btn" onclick="markClaimed(${item.id})">Claimed</button>
+            <button class="notclaimed-btn" onclick="markNotClaimed(${item.id})">Not Claimed</button>
+          </td>
+        `;
+        lostTable.appendChild(row);
+      });
+
+      // --- HISTORY SECTION ---
+      const filteredFound = foundItems.filter(item =>
+        Object.values(item).some(value =>
+          String(value).toLowerCase().includes(query)
+        )
+      );
+
+      if (filteredFound.length === 0) {
+        foundTable.innerHTML = `<tr><td colspan="10" style="text-align:center;">No history found.</td></tr>`;
+      }
+
+      filteredFound.forEach(item => {
+        const statusClass = item.status === 'Claimed' ? 'claimed-tag' : 'notclaimed-tag';
+        const actionButton =
+          item.status === 'Not Claimed'
+            ? `<button class="claimed-btn" onclick="markAsClaimedFromHistory(${item.id})">Claimed</button>`
+            : `<span style="color:gray;">—</span>`;
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${item.studentName}</td>
+          <td>${item.studentNumber}</td>
+          <td>${item.department || '—'}</td>
+          <td>${item.gradeSection}</td>
+          <td>${item.name}</td>
+          <td>
+            <div><strong>Description:</strong> ${item.desc}</div>
+            <div><strong>Location:</strong> ${item.location}</div>
+          </td>
+          <td>${item.contact}</td>
+          <td>${item.date}</td>
+          <td><span class="status-tag ${statusClass}">${item.status}</span></td>
+          <td>${actionButton}</td>
+        `;
+        foundTable.appendChild(row);
+      });
+    }
+
+    // Edit function
+    function editItem(id, field, value) {
+      let lostItems = JSON.parse(localStorage.getItem('lostItems')) || [];
+      const index = lostItems.findIndex(item => item.id === id);
+      if (index > -1) {
+        lostItems[index][field] = value;
+        localStorage.setItem('lostItems', JSON.stringify(lostItems));
+      }
+    }
+
+    // Move item to history
+    function markClaimed(id) { moveToHistory(id, "Claimed"); }
+    function markNotClaimed(id) { moveToHistory(id, "Not Claimed"); }
+
+    function moveToHistory(id, status) {
+      let lostItems = JSON.parse(localStorage.getItem('lostItems')) || [];
+      let foundItems = JSON.parse(localStorage.getItem('foundItems')) || [];
+      const index = lostItems.findIndex(item => item.id === id);
+      if (index > -1) {
+        const [movedItem] = lostItems.splice(index, 1);
+        movedItem.date = new Date().toLocaleString();
+        movedItem.status = status;
+        foundItems.push(movedItem);
+        localStorage.setItem('lostItems', JSON.stringify(lostItems));
+        localStorage.setItem('foundItems', JSON.stringify(foundItems));
+        loadItems();
+      }
+    }
+
+    // Mark item in history as claimed
+    function markAsClaimedFromHistory(id) {
+      let foundItems = JSON.parse(localStorage.getItem('foundItems')) || [];
+      const index = foundItems.findIndex(item => item.id === id);
+      if (index > -1) {
+        foundItems[index].status = "Claimed";
+        foundItems[index].date = new Date().toLocaleString();
+        localStorage.setItem('foundItems', JSON.stringify(foundItems));
+        loadItems();
+      }
+    }
+
+    // Real-time search listener
+    searchInput.addEventListener('input', loadItems);
+
+    // Load on page start
+    loadItems();
+  </script>
+</body>
+</html>

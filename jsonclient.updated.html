@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Client - Lost or Found</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 40px; }
+    form { margin-top: 20px; }
+    input, textarea, select { 
+      display: block; 
+      margin: 8px 0; 
+      padding: 6px; 
+      width: 300px; 
+    }
+    button { 
+      padding: 6px 12px; 
+      cursor: pointer; 
+    }
+    table { 
+      border-collapse: collapse; 
+      margin-top: 30px; 
+      width: 100%; 
+    }
+    th, td { 
+      border: 1px solid #ccc; 
+      padding: 8px; 
+      text-align: left; 
+    }
+    .message { 
+      color: rgb(27, 91, 27); 
+      margin-top: 10px; 
+      font-weight: bold; 
+    }
+  </style>
+</head>
+<body>
+  <h1>Lost or Found - Client Side</h1>
+
+  <form id="lostForm">
+    <label>Student Name:</label>
+    <input type="text" id="studentName" required>
+
+    <label>Student Number:</label>
+    <input type="text" id="studentNumber" required>
+
+    
+    <label>Grade and Section:</label>
+    <input type="text" id="gradeSection" required>
+
+    <!-- Dropdown for Department -->
+    <label>Department:</label>
+    <select id="department" required>
+      <option value="" disabled selected>Select Department</option>
+      <option value="College Department">College Department</option>
+      <option value="Senior High School Department">SHS Department</option>
+      <option value="Grade School Department">Grade School Department</option>
+    </select>
+
+    <!-- New Dropdown for Lost/Found -->
+    <label>Lost or found:</label>
+    <select id="itemType" required>
+      <option value="" disabled selected>Select Type</option>
+      <option value="Lost">Lost</option>
+      <option value="Found">Found</option>
+    </select>
+
+    <label>Item Name:</label>
+    <input type="text" id="itemName" required>
+
+    <label>Description:</label>
+    <textarea id="itemDesc" required></textarea>
+
+    <label>Location:</label>
+    <textarea id="location" required></textarea>
+
+    <label>Contact No.</label>
+    <input type="text" id="contactInfo" required>
+
+    <button type="submit" id="submitBtn">Submit</button>
+  </form>
+
+  <p class="message" id="msg"></p>
+
+  <h2>Your Submitted Items</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Student Name</th>
+        <th>Student Number</th>
+        <th>Department</th>
+        <th>Grade & Section</th>
+        <th>Type</th>
+        <th>Item Name</th>
+        <th>Description</th>
+        <th>Location</th>
+        <th>Contact Info</th>
+        <th>Date Submitted</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="itemTable"></tbody>
+  </table>
+
+  <script>
+    const form = document.getElementById('lostForm');
+    const msg = document.getElementById('msg');
+    const tableBody = document.getElementById('itemTable');
+    const submitBtn = document.getElementById('submitBtn');
+    let editId = null;
+
+    loadItems();
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      let lostItems = JSON.parse(localStorage.getItem('lostItems')) || [];
+
+      const newItem = {
+        id: editId ? editId : Date.now(),
+        studentName: document.getElementById('studentName').value,
+        studentNumber: document.getElementById('studentNumber').value,
+        department: document.getElementById('department').value,
+        gradeSection: document.getElementById('gradeSection').value,
+        type: document.getElementById('itemType').value,
+        name: document.getElementById('itemName').value,
+        desc: document.getElementById('itemDesc').value,
+        location: document.getElementById('location').value,
+        contact: document.getElementById('contactInfo').value,
+        date: editId ? lostItems.find(i => i.id === editId).date : new Date().toLocaleString()
+      };
+
+      if (editId) {
+        const index = lostItems.findIndex(item => item.id === editId);
+        lostItems[index] = newItem;
+        msg.textContent = "Item updated successfully!";
+        editId = null;
+        submitBtn.textContent = "Submit";
+      } else {
+        lostItems.push(newItem);
+        msg.textContent = "Item submitted successfully!";
+      }
+
+      localStorage.setItem('lostItems', JSON.stringify(lostItems));
+      form.reset();
+      loadItems();
+    });
+
+    function loadItems() {
+      const lostItems = JSON.parse(localStorage.getItem('lostItems')) || [];
+      tableBody.innerHTML = '';
+
+      lostItems.forEach(item => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${item.studentName}</td>
+          <td>${item.studentNumber}</td>
+          <td>${item.department}</td>
+          <td>${item.gradeSection}</td>
+          <td>${item.type}</td>
+          <td>${item.name}</td>
+          <td>${item.desc}</td>
+          <td>${item.location}</td>
+          <td>${item.contact}</td>
+          <td>${item.date}</td>
+          <td>
+            <button onclick="editItem(${item.id})">Edit</button>
+            
+          </td>
+        `;
+        tableBody.appendChild(row);
+      });
+    }
+
+    function editItem(id) {
+      const lostItems = JSON.parse(localStorage.getItem('lostItems')) || [];
+      const item = lostItems.find(item => item.id === id);
+      if (item) {
+        document.getElementById('studentName').value = item.studentName;
+        document.getElementById('studentNumber').value = item.studentNumber;
+        document.getElementById('department').value = item.department;
+        document.getElementById('gradeSection').value = item.gradeSection;
+        document.getElementById('itemType').value = item.type;
+        document.getElementById('itemName').value = item.name;
+        document.getElementById('itemDesc').value = item.desc;
+        document.getElementById('location').value = item.location;
+        document.getElementById('contactInfo').value = item.contact;
+        editId = id;
+        submitBtn.textContent = "Update";
+      }
+    }
+
+    function deleteItem(id) {
+      let lostItems = JSON.parse(localStorage.getItem('lostItems')) || [];
+      lostItems = lostItems.filter(item => item.id !== id);
+      localStorage.setItem('lostItems', JSON.stringify(lostItems));
+      msg.textContent = "Item deleted successfully!";
+      loadItems();
+    }
+  </script>
+</body>
+</html>
