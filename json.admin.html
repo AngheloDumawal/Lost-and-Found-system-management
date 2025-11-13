@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin - Lost and Found</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 40px; }
+    table { border-collapse: collapse; width: 100%; margin-bottom: 40px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; vertical-align: top; }
+    button { padding: 4px 8px; margin: 2px; cursor: pointer; border-radius: 4px; }
+    h2 { margin-top: 50px; }
+    .edit-input { width: 95%; padding: 4px; }
+    .found-btn { background-color: #4CAF50; color: white; border: none; }
+    .notfound-btn { background-color: #f44336; color: white; border: none; }
+    .delete-btn { background-color: #555; color: white; border: none; }
+  </style>
+</head>
+<body>
+  <h1>Admin Dashboard - Lost and Found</h1>
+
+  <h2>Lost Items</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Student Name</th>
+        <th>Student Number</th>
+        <th>Department</th>
+        <th>Grade & Section</th>
+        <th>Item Name</th>
+        <th>Description & Location</th>
+        <th>Contact Info</th>
+        <th>Date Submitted</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="lostTableBody"></tbody>
+  </table>
+
+  <h2>History (Found / Not Found)</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Student Name</th>
+        <th>Student Number</th>
+        <th>Department</th>
+        <th>Grade & Section</th>
+        <th>Item Name</th>
+        <th>Description & Location</th>
+        <th>Contact Info</th>
+        <th>Date Processed</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="foundTableBody"></tbody>
+  </table>
+
+  <script>
+    const lostTable = document.getElementById('lostTableBody');
+    const foundTable = document.getElementById('foundTableBody');
+
+    function loadItems() {
+      const lostItems = JSON.parse(localStorage.getItem('lostItems')) || [];
+      const foundItems = JSON.parse(localStorage.getItem('foundItems')) || [];
+
+      lostTable.innerHTML = '';
+      foundTable.innerHTML = '';
+
+      // LOST ITEMS (Editable)
+      lostItems.forEach(item => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td><input class="edit-input" type="text" value="${item.studentName}" onchange="editItem(${item.id}, 'studentName', this.value)"></td>
+          <td><input class="edit-input" type="text" value="${item.studentNumber}" onchange="editItem(${item.id}, 'studentNumber', this.value)"></td>
+          <td>
+            <select class="edit-input" onchange="editItem(${item.id}, 'department', this.value)">
+              <option value="College Department" ${item.department === 'College Department' ? 'selected' : ''}>College Department</option>
+              <option value="Senior High School Department" ${item.department === 'Senior High School Department' ? 'selected' : ''}>SHS Department</option>
+              <option value="Grade School Department" ${item.department === 'Grade School Department' ? 'selected' : ''}>Grade School Department</option>
+            </select>
+          </td>
+          <td><input class="edit-input" type="text" value="${item.gradeSection}" onchange="editItem(${item.id}, 'gradeSection', this.value)"></td>
+          <td><input class="edit-input" type="text" value="${item.name}" onchange="editItem(${item.id}, 'name', this.value)"></td>
+          <td>
+            <textarea class="edit-input" rows="2" onchange="editItem(${item.id}, 'desc', this.value)">${item.desc}</textarea>
+            <br>
+            <label><strong>Location:</strong></label>
+            <input class="edit-input" type="text" value="${item.location}" onchange="editItem(${item.id}, 'location', this.value)">
+          </td>
+          <td><input class="edit-input" type="text" value="${item.contact}" onchange="editItem(${item.id}, 'contact', this.value)"></td>
+          <td>${item.date}</td>
+          <td>
+            <button class="found-btn" onclick="markFound(${item.id})">Found</button>
+            <button class="notfound-btn" onclick="markNotFound(${item.id})">Didn’t Find</button>
+          </td>
+        `;
+        lostTable.appendChild(row);
+      });
+
+      // FOUND/NOT FOUND HISTORY
+      foundItems.forEach(item => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${item.studentName}</td>
+          <td>${item.studentNumber}</td>
+          <td>${item.department || '—'}</td>
+          <td>${item.gradeSection}</td>
+          <td>${item.name}</td>
+          <td>
+            <div><strong>Description:</strong> ${item.desc}</div>
+            <div><strong>Location:</strong> ${item.location}</div>
+          </td>
+          <td>${item.contact}</td>
+          <td>${item.date}</td>
+          <td style="color:${item.status === 'Not Found' ? 'red' : 'green'}"><strong>${item.status}</strong></td>
+          <td><button class="delete-btn" onclick="deleteFoundItem(${item.id})">Delete</button></td>
+        `;
+        foundTable.appendChild(row);
+      });
+    }
+
+    // Edit Lost Item
+    function editItem(id, field, value) {
+      let lostItems = JSON.parse(localStorage.getItem('lostItems')) || [];
+      const index = lostItems.findIndex(item => item.id === id);
+      if (index > -1) {
+        lostItems[index][field] = value;
+        localStorage.setItem('lostItems', JSON.stringify(lostItems));
+      }
+    }
+
+    // Mark as Found
+    function markFound(id) {
+      let lostItems = JSON.parse(localStorage.getItem('lostItems')) || [];
+      let foundItems = JSON.parse(localStorage.getItem('foundItems')) || [];
+      const index = lostItems.findIndex(item => item.id === id);
+      if (index > -1) {
+        const [foundItem] = lostItems.splice(index, 1);
+        foundItem.date = new Date().toLocaleString();
+        foundItem.status = "Found";
+        foundItems.push(foundItem);
+        localStorage.setItem('lostItems', JSON.stringify(lostItems));
+        localStorage.setItem('foundItems', JSON.stringify(foundItems));
+        loadItems();
+      }
+    }
+
+    // Mark as Not Found (move to history too)
+    function markNotFound(id) {
+      if (confirm("Mark this item as 'Not Found' and move to history?")) {
+        let lostItems = JSON.parse(localStorage.getItem('lostItems')) || [];
+        let foundItems = JSON.parse(localStorage.getItem('foundItems')) || [];
+        const index = lostItems.findIndex(item => item.id === id);
+        if (index > -1) {
+          const [notFoundItem] = lostItems.splice(index, 1);
+          notFoundItem.date = new Date().toLocaleString();
+          notFoundItem.status = "Not Found";
+          foundItems.push(notFoundItem);
+          localStorage.setItem('lostItems', JSON.stringify(lostItems));
+          localStorage.setItem('foundItems', JSON.stringify(foundItems));
+          loadItems();
+        }
+      }
+    }
+
+    // Delete Found Item
+    function deleteFoundItem(id) {
+      if (confirm("Delete this record from history?")) {
+        let foundItems = JSON.parse(localStorage.getItem('foundItems')) || [];
+        foundItems = foundItems.filter(item => item.id !== id);
+        localStorage.setItem('foundItems', JSON.stringify(foundItems));
+        loadItems();
+      }
+    }
+
+    setInterval(loadItems, 2000);
+    loadItems();
+  </script>
+</body>
+</html>
